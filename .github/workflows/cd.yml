@@ -39,24 +39,32 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Deploy to server via SSH (password auth)
-      - uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          DEPLOY_IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: 22
+          envs: DEPLOY_HOST,DEPLOY_USER,DEPLOY_PASSWORD,DEPLOY_IMAGE,GITHUB_ACTOR,GITHUB_TOKEN,JWT_SECRET
           script_stop: true
           script: |
             set -euo pipefail
 
             # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u ${{ github.actor }} --password-stdin
-
-            IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            echo "$GITHUB_TOKEN" | docker login ghcr.io \
+              -u "$GITHUB_ACTOR" --password-stdin
 
             # Pull new image
-            docker pull "$IMAGE"
+            docker pull "$DEPLOY_IMAGE"
 
             # Stop and remove old container (ignore if not exists)
             docker stop heyinlin || true
@@ -71,12 +79,12 @@ jobs:
               --restart unless-stopped \
               -p 3001:3001 \
               -e NODE_ENV=production \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e JWT_SECRET="$JWT_SECRET" \
               -e DB_PATH=/app/data/personal-space.db \
               -e UPLOAD_DIR=/app/uploads \
-              -v ${{ secrets.DEPLOY_DATA_DIR || '/data/heyinlin' }}:/app/data \
-              -v ${{ secrets.DEPLOY_UPLOADS_DIR || '/data/heyinlin/uploads' }}:/app/uploads \
-              "$IMAGE"
+              -v /data/heyinlin:/app/data \
+              -v /data/heyinlin/uploads:/app/uploads \
+              "$DEPLOY_IMAGE"
 
             # Health check
             for i in $(seq 1 30); do
