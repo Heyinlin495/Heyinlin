@@ -40,63 +40,72 @@ jobs:
 
       # Deploy to server via SSH (password auth)
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
-          DEPLOY_IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
-          port: 22
-          envs: DEPLOY_HOST,DEPLOY_USER,DEPLOY_PASSWORD,DEPLOY_IMAGE,GITHUB_ACTOR,GITHUB_TOKEN,JWT_SECRET
-          script_stop: true
-          script: |
-            set -euo pipefail
+        run: |
+          set -euo pipefail
 
-            # Login to GHCR
-            echo "$GITHUB_TOKEN" | docker login ghcr.io \
-              -u "$GITHUB_ACTOR" --password-stdin
+          # Install sshpass
+          sudo apt-get update && sudo apt-get install -y sshpass
 
-            # Pull new image
-            docker pull "$DEPLOY_IMAGE"
+          # Create deploy script
+          cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT'
+          #!/bin/bash
+          set -euo pipefail
 
-            # Stop and remove old container (ignore if not exists)
-            docker stop heyinlin || true
-            docker rm heyinlin || true
+          GITHUB_TOKEN="$1"
+          GITHUB_ACTOR="$2"
+          DEPLOY_IMAGE="$3"
+          JWT_SECRET="$4"
 
-            # Remove dangling images
-            docker image prune -f
+          # Login to GHCR
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
-            # Start new container
-            docker run -d \
-              --name heyinlin \
-              --restart unless-stopped \
-              -p 3001:3001 \
-              -e NODE_ENV=production \
-              -e JWT_SECRET="$JWT_SECRET" \
-              -e DB_PATH=/app/data/personal-space.db \
-              -e UPLOAD_DIR=/app/uploads \
-              -v /data/heyinlin:/app/data \
-              -v /data/heyinlin/uploads:/app/uploads \
-              "$DEPLOY_IMAGE"
+          # Pull new image
+          docker pull "$DEPLOY_IMAGE"
 
-            # Health check
-            for i in $(seq 1 30); do
-              if curl -sf http://localhost:3001/api/health > /dev/null; then
-                echo "Deployed successfully"
-                exit 0
-              fi
-              echo "Waiting for health check... ($i/30)"
-              sleep 2
-            done
+          # Stop and remove old container (ignore if not exists)
+          docker stop heyinlin || true
+          docker rm heyinlin || true
 
-            echo "Health check failed, rolling back"
-            docker stop heyinlin
-            docker rm heyinlin
-            exit 1
+          # Remove dangling images
+          docker image prune -f
+
+          # Start new container
+          docker run -d \
+            --name heyinlin \
+            --restart unless-stopped \
+            -p 3001:3001 \
+            -e NODE_ENV=production \
+            -e JWT_SECRET="$JWT_SECRET" \
+            -e DB_PATH=/app/data/personal-space.db \
+            -e UPLOAD_DIR=/app/uploads \
+            -v /data/heyinlin:/app/data \
+            -v /data/heyinlin/uploads:/app/uploads \
+            "$DEPLOY_IMAGE"
+
+          # Health check
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/health > /dev/null; then
+              echo "Deployed successfully"
+              exit 0
+            fi
+            echo "Waiting for health check... ($i/30)"
+            sleep 2
+          done
+
+          echo "Health check failed, rolling back"
+          docker stop heyinlin
+          docker rm heyinlin
+          exit 1
+          DEPLOY_SCRIPT
+
+          # Execute on remote server
+          sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -p 22 \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            bash -s -- \
+            "${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.actor }}" \
+            "${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+            "${{ secrets.JWT_SECRET }}" < /tmp/deploy.sh
