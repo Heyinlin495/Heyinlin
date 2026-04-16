@@ -102,7 +102,7 @@ jobs:
           sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
-            -p "${{ secrets.DEPLOY_PORT }}" \
+            -p 22 \
             "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
             bash -s -- \
             "${{ secrets.GITHUB_TOKEN }}" \
