@@ -41,15 +41,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve frontend static files in production
-const staticDir = path.join(__dirname, '..', 'frontend', 'dist');
-if (existsSync(staticDir)) {
-  app.use(express.static(staticDir));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(staticDir, 'index.html'));
-  });
-}
-
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -70,6 +61,15 @@ app.get('/api/health', (_req, res) => {
     res.status(500).json({ status: 'error', database: 'disconnected' });
   }
 });
+
+// Serve frontend static files in production (must be after API routes)
+const staticDir = path.join(__dirname, '..', 'frontend', 'dist');
+if (existsSync(staticDir)) {
+  app.use(express.static(staticDir));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // 404 handler
 app.use((_req, res) => {
