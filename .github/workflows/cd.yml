@@ -86,6 +86,10 @@ jobs:
           # Remove dangling images
           docker image prune -f
 
+          # Ensure data directories exist and are writable
+          mkdir -p /data/heyinlin /data/heyinlin/uploads
+          chmod 777 /data/heyinlin /data/heyinlin/uploads
+
           # Start new container
           docker run -d \
             --name heyinlin \
