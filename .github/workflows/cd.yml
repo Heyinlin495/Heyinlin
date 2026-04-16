@@ -1,0 +1,86 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  IMAGE_NAME: heyinlin
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Login to GitHub Container Registry
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push Docker image
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Deploy to server via SSH
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -euo pipefail
+
+            # Login to GHCR
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+              -u ${{ github.actor }} --password-stdin
+
+            IMAGE="ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+            # Pull new image
+            docker pull "$IMAGE"
+
+            # Stop and remove old container (ignore if not exists)
+            docker stop ${{ env.IMAGE_NAME }} || true
+            docker rm ${{ env.IMAGE_NAME }} || true
+
+            # Remove dangling images
+            docker image prune -f
+
+            # Start new container
+            docker run -d \
+              --name ${{ env.IMAGE_NAME }} \
+              --restart unless-stopped \
+              -p 3001:3001 \
+              -e NODE_ENV=production \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e DB_PATH=/app/data/personal-space.db \
+              -e UPLOAD_DIR=/app/uploads \
+              -v ${{ secrets.DEPLOY_DATA_DIR || '/data/heyinlin' }}:/app/data \
+              -v ${{ secrets.DEPLOY_UPLOADS_DIR || '/data/heyinlin/uploads' }}:/app/uploads \
+              "$IMAGE"
+
+            # Health check
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3001/api/health > /dev/null; then
+                echo "Deployed successfully"
+                exit 0
+              fi
+              echo "Waiting for health check... ($i/30)"
+              sleep 2
+            done
+
+            echo "Health check failed, rolling back"
+            docker stop ${{ env.IMAGE_NAME }}
+            docker rm ${{ env.IMAGE_NAME }}
+            exit 1

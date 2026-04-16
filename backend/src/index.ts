@@ -2,6 +2,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { existsSync } from 'fs';
 
 import { initDB, getDB, closeDB, startAutoSave } from './db';
 
@@ -38,6 +40,15 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+// Serve frontend static files in production
+const staticDir = path.join(__dirname, '..', 'frontend', 'dist');
+if (existsSync(staticDir)) {
+  app.use(express.static(staticDir));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // API Routes
 app.use('/api/auth', authRoutes);
