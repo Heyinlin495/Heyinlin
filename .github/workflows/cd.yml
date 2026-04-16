@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: ghcr.io/heyinlin495/heyinlin/heyinlin
+  IMAGE_NAME: ghcr.io/heyinlin495/heyinlin
 
 jobs:
   build-and-deploy:
