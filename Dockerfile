@@ -14,14 +14,14 @@ WORKDIR /app
 
 COPY backend/package.json backend/package-lock.json ./
 RUN apk add --no-cache python3 make g++ && \
-    npm ci --ignore-scripts && \
+    npm ci && \
     apk del python3 make g++
 
 COPY backend/tsconfig.json ./
 COPY backend/src/ ./src/
 RUN npx tsc
 
-# ---- Stage 3: Runtime ----
+# ---- Stage 2: Runtime ----
 FROM node:22-alpine
 
 RUN apk add --no-cache dumb-init
@@ -31,13 +31,10 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-# Install production dependencies only
-COPY backend/package.json backend/package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && \
-    rm -rf /tmp/*
-
-# Copy compiled backend
+# Copy compiled backend and its node_modules (with native bcrypt bindings)
 COPY --from=backend-build /app/dist ./dist
+COPY --from=backend-build /app/node_modules ./node_modules
+COPY --from=backend-build /app/package.json ./
 
 # Copy built frontend static files
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
@@ -52,7 +49,7 @@ EXPOSE 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
 CMD ["dumb-init", "--", "node", "dist/index.js"]
