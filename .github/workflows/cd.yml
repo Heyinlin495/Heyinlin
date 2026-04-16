@@ -40,11 +40,23 @@ jobs:
 
       # Deploy to server via SSH (password auth)
       - name: Deploy via SSH
+        env:
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           set -euo pipefail
 
           # Install sshpass
           sudo apt-get update && sudo apt-get install -y sshpass
+
+          # Sanitize inputs (trim leading/trailing whitespace)
+          DEPLOY_USER=$(printf '%s' "$DEPLOY_USER" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          DEPLOY_HOST=$(printf '%s' "$DEPLOY_HOST" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          SSH_DEST="${DEPLOY_USER}@${DEPLOY_HOST}"
+          echo "Connecting to: ${SSH_DEST}"
 
           # Create deploy script
           cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT'
@@ -99,13 +111,13 @@ jobs:
           DEPLOY_SCRIPT
 
           # Execute on remote server
-          sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh \
+          sshpass -p "${DEPLOY_PASSWORD}" ssh \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -p 22 \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "${SSH_DEST}" \
             bash -s -- \
-            "${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.actor }}" \
+            "${GITHUB_TOKEN}" \
+            "Heyinlin495" \
             "${{ env.IMAGE_NAME }}:${{ github.sha }}" \
-            "${{ secrets.JWT_SECRET }}" < /tmp/deploy.sh
+            "${JWT_SECRET}" < /tmp/deploy.sh
