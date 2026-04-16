@@ -103,7 +103,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -p 22 \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "${{ secrets.DEPLOY_SSH_DEST }}" \
             bash -s -- \
             "${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.actor }}" \
