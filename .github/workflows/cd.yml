@@ -52,11 +52,16 @@ jobs:
           # Install sshpass
           sudo apt-get update && sudo apt-get install -y sshpass
 
-          # Sanitize inputs - keep only valid characters
-          DEPLOY_USER=$(printf '%s' "$DEPLOY_USER" | tr -cd 'a-zA-Z0-9_-')
-          DEPLOY_HOST=$(printf '%s' "$DEPLOY_HOST" | tr -cd 'a-zA-Z0-9._-')
-          SSH_DEST="${DEPLOY_USER}@${DEPLOY_HOST}"
-          echo "Connecting to: ${SSH_DEST}"
+          # Write secrets to files to handle encoding issues
+          printf '%s' "$DEPLOY_USER" | tr -cd 'a-zA-Z0-9_-' > /tmp/deploy_user
+          printf '%s' "$DEPLOY_HOST" | tr -cd 'a-zA-Z0-9._-' > /tmp/deploy_host
+          DEPLOY_USER=$(cat /tmp/deploy_user)
+          DEPLOY_HOST=$(cat /tmp/deploy_host)
+          printf '%s' "$DEPLOY_PASSWORD" | tr -cd '[:print:]' > /tmp/deploy_pass
+          DEPLOY_PASSWORD=$(cat /tmp/deploy_pass)
+
+          echo "User length: ${#DEPLOY_USER}, Host length: ${#DEPLOY_HOST}"
+          echo "Host preview: $(echo "$DEPLOY_HOST" | head -c 20)"
 
           # Create deploy script
           cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT'
