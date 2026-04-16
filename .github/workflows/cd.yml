@@ -52,9 +52,9 @@ jobs:
           # Install sshpass
           sudo apt-get update && sudo apt-get install -y sshpass
 
-          # Sanitize inputs (trim leading/trailing whitespace)
-          DEPLOY_USER=$(printf '%s' "$DEPLOY_USER" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          DEPLOY_HOST=$(printf '%s' "$DEPLOY_HOST" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          # Sanitize inputs - keep only valid characters
+          DEPLOY_USER=$(printf '%s' "$DEPLOY_USER" | tr -cd 'a-zA-Z0-9_-')
+          DEPLOY_HOST=$(printf '%s' "$DEPLOY_HOST" | tr -cd 'a-zA-Z0-9._-')
           SSH_DEST="${DEPLOY_USER}@${DEPLOY_HOST}"
           echo "Connecting to: ${SSH_DEST}"
 
