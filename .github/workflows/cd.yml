@@ -110,12 +110,13 @@ jobs:
           exit 1
           DEPLOY_SCRIPT
 
-          # Execute on remote server
-          sshpass -p "${DEPLOY_PASSWORD}" ssh \
+          # Execute on remote server using SSHPASS env var
+          export SSHPASS="${DEPLOY_PASSWORD}"
+          sshpass -e ssh \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
-            -p 22 \
-            "${SSH_DEST}" \
+            -l "${DEPLOY_USER}" \
+            "${DEPLOY_HOST}" \
             bash -s -- \
             "${GITHUB_TOKEN}" \
             "Heyinlin495" \
