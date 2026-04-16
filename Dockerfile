@@ -17,7 +17,8 @@ RUN apk add --no-cache python3 make g++ && \
     npm ci --ignore-scripts && \
     apk del python3 make g++
 
-COPY backend/tsconfig.json backend/src/ ./src/
+COPY backend/tsconfig.json ./
+COPY backend/src/ ./src/
 RUN npx tsc
 
 # ---- Stage 3: Runtime ----
