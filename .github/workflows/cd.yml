@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: heyinlin
+  IMAGE_NAME: ghcr.io/heyinlin495/heyinlin/heyinlin
 
 jobs:
   build-and-deploy:
@@ -29,8 +29,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ toLower(github.repository) }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ghcr.io/${{ toLower(github.repository) }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -48,21 +48,21 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u ${{ github.actor }} --password-stdin
 
-            IMAGE="ghcr.io/${{ toLower(github.repository) }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
 
             # Pull new image
             docker pull "$IMAGE"
 
             # Stop and remove old container (ignore if not exists)
-            docker stop ${{ env.IMAGE_NAME }} || true
-            docker rm ${{ env.IMAGE_NAME }} || true
+            docker stop heyinlin || true
+            docker rm heyinlin || true
 
             # Remove dangling images
             docker image prune -f
 
             # Start new container
             docker run -d \
-              --name ${{ env.IMAGE_NAME }} \
+              --name heyinlin \
               --restart unless-stopped \
               -p 3001:3001 \
               -e NODE_ENV=production \
@@ -84,6 +84,6 @@ jobs:
             done
 
             echo "Health check failed, rolling back"
-            docker stop ${{ env.IMAGE_NAME }}
-            docker rm ${{ env.IMAGE_NAME }}
+            docker stop heyinlin
+            docker rm heyinlin
             exit 1
