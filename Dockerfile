@@ -15,7 +15,6 @@ WORKDIR /app
 COPY backend/package.json backend/package-lock.json ./
 RUN apk add --no-cache python3 make g++ && \
     npm ci --ignore-scripts && \
-    npm prune --production && \
     apk del python3 make g++
 
 COPY backend/tsconfig.json backend/src/ ./src/
