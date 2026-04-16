@@ -99,6 +99,11 @@ jobs:
             -v /data/heyinlin/uploads:/app/uploads \
             "$DEPLOY_IMAGE"
 
+          # Wait for container to start
+          sleep 3
+          echo "Container status:"
+          docker ps -a --filter name=heyinlin
+
           # Health check
           for i in $(seq 1 30); do
             if curl -sf http://localhost:3001/api/health > /dev/null; then
@@ -109,6 +114,8 @@ jobs:
             sleep 2
           done
 
+          echo "Health check failed, showing container logs:"
+          docker logs heyinlin 2>&1
           echo "Health check failed, rolling back"
           docker stop heyinlin
           docker rm heyinlin
