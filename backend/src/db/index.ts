@@ -75,6 +75,32 @@ function runMigrations(database: any): void {
       database.run('ALTER TABLE posts ADD COLUMN tags TEXT');
     }
   }
+
+  // Add missing columns to projects table if needed
+  const projectColumns = database.exec('PRAGMA table_info(projects)');
+  if (projectColumns.length > 0 && projectColumns[0].columns.includes('name')) {
+    const existingProjectCols = projectColumns[0].values.map((row: unknown[]) => row[1]);
+    const requiredProjectCols = ['media', 'external_links', 'version_history'];
+    for (const col of requiredProjectCols) {
+      if (!existingProjectCols.includes(col)) {
+        console.log(`Migration: adding ${col} column to projects table`);
+        database.run(`ALTER TABLE projects ADD COLUMN ${col} TEXT`);
+      }
+    }
+  }
+
+  // Add missing columns to users table if needed
+  const userColumns = database.exec('PRAGMA table_info(users)');
+  if (userColumns.length > 0 && userColumns[0].columns.includes('name')) {
+    const existingUserCols = userColumns[0].values.map((row: unknown[]) => row[1]);
+    const requiredUserCols = ['bio', 'role_type', 'website', 'location', 'is_verified', 'is_private', 'theme'];
+    for (const col of requiredUserCols) {
+      if (!existingUserCols.includes(col)) {
+        console.log(`Migration: adding ${col} column to users table`);
+        database.run(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
+      }
+    }
+  }
 }
 
 // Save database to disk
