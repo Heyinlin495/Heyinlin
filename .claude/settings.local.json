@@ -49,7 +49,21 @@
       "Bash(curl -s \"http://localhost:3001/api/photos/user/1770591338%40qq.com\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('Photos count:', j.data.length\\); console.log\\(JSON.stringify\\(j.data[0], null, 2\\)\\)}\\)\")",
       "Bash(curl -s http://localhost:3001/api/auth/captcha)",
-      "Bash(findstr LISTENING)"
+      "Bash(findstr LISTENING)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run list --limit 3)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24518403408)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24518637109)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24518637109 --log-failed)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24519201600)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24519296924)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24519325680)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24519423592)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24519423592 --log-failed)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run list --limit 5)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24520931468)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24520931468 --log-failed)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run view 24521134137)",
+      "Bash(npm test *)"
     ]
   }
 }
